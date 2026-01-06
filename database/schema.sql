@@ -51,3 +51,12 @@ CREATE TABLE project_skills (
   FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
 );
 
+CREATE TABLE personnel_projects (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  personnel_id INT NOT NULL,
+  project_id INT NOT NULL,
+  assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (personnel_id) REFERENCES personnel(id) ON DELETE CASCADE,
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+  UNIQUE (personnel_id, project_id)
+);
