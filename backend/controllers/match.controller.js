@@ -1,13 +1,10 @@
 import db from '../config/db.js';
 
-// Proficiency mapping for sorting
-const proficiencyOrder = { Beginner: 1, Intermediate: 2, Advanced: 3, Expert: 4 };
-
 export const getProjectMatches = async (req, res) => {
     const { projectId } = req.params;
 
     try {
-        // Get project required skills
+        // Get project requirements
         const [requirements] = await db.query(
             `SELECT ps.skill_id, s.name AS skill_name, ps.min_proficiency
              FROM project_skills ps
@@ -20,55 +17,59 @@ export const getProjectMatches = async (req, res) => {
             return res.json({ project: projectId, requirements: [], matched_personnel: [] });
         }
 
-        // Find personnel who meet each skill requirement
-        let matchedPersonnelBySkill = [];
+        // Get all personnel
+        const [personnelList] = await db.query(`SELECT * FROM personnel`);
 
-        for (let reqSkill of requirements) {
-            const [rows] = await db.query(
-                `SELECT p.id, p.name, p.role, ps.proficiency
-                 FROM personnel_skills ps
-                 JOIN personnel p ON ps.personnel_id = p.id
-                 WHERE ps.skill_id = ? 
-                   AND FIELD(ps.proficiency, 'Beginner','Intermediate','Advanced','Expert') >=
-                       FIELD(?, 'Beginner','Intermediate','Advanced','Expert')`,
-                [reqSkill.skill_id, reqSkill.min_proficiency]
-            );
+        const proficiencyOrder = { Beginner: 1, Intermediate: 2, Advanced: 3, Expert: 4 };
 
-            matchedPersonnelBySkill.push(rows);
-        }
+        // Calculate match percentage for each personnel
+        let matchedPersonnel = [];
 
-        // Combine matched personnel who satisfy ALL skills
-        let finalMatches = [];
-        if (matchedPersonnelBySkill.length > 0) {
-            finalMatches = matchedPersonnelBySkill.reduce((a, b) =>
-                a.filter(personA => b.some(personB => personA.id === personB.id))
-            );
-        }
-
-        // Fetch all skills for each matched personnel
-        for (let person of finalMatches) {
-            const [skills] = await db.query(
-                `SELECT s.name AS skill_name, ps.proficiency
-                 FROM personnel_skills ps
-                 JOIN skills s ON ps.skill_id = s.id
-                 WHERE ps.personnel_id = ?`,
+        for (let person of personnelList) {
+            const [personSkills] = await db.query(
+                `SELECT skill_id, proficiency
+                 FROM personnel_skills
+                 WHERE personnel_id = ?`,
                 [person.id]
             );
-            person.skills = skills;
+
+            let matchedSkillsCount = 0;
+            for (let reqSkill of requirements) {
+                const skill = personSkills.find(ps => ps.skill_id === reqSkill.skill_id);
+                if (skill && proficiencyOrder[skill.proficiency] >= proficiencyOrder[reqSkill.min_proficiency]) {
+                    matchedSkillsCount++;
+                }
+            }
+
+            const matchPercentage = Math.round((matchedSkillsCount / requirements.length) * 100);
+
+            if (matchPercentage >= 50) { // ✅ Filter: only >=50%
+                // Check availability
+                const [assignments] = await db.query(
+                    `SELECT * FROM personnel_projects
+                     WHERE personnel_id = ?
+                     AND NOT (end_date < ? OR start_date > ?)`,
+                    [person.id, new Date().toISOString().split('T')[0], new Date().toISOString().split('T')[0]]
+                );
+                const available = assignments.length === 0;
+
+                matchedPersonnel.push({
+                    id: person.id,
+                    name: person.name,
+                    role: person.role,
+                    match_percentage: matchPercentage,
+                    available
+                });
+            }
         }
 
-        // Sort by average proficiency
-        finalMatches.sort((a, b) => {
-            const aScore = a.skills.reduce((sum, s) => sum + proficiencyOrder[s.proficiency], 0) / a.skills.length;
-            const bScore = b.skills.reduce((sum, s) => sum + proficiencyOrder[s.proficiency], 0) / b.skills.length;
-            return bScore - aScore; // highest first
-        });
+        // Sort by highest match percentage first
+        matchedPersonnel.sort((a, b) => b.match_percentage - a.match_percentage);
 
-        // Send response
         res.json({
             project: projectId,
             requirements,
-            matched_personnel: finalMatches
+            matched_personnel: matchedPersonnel
         });
 
     } catch (err) {
