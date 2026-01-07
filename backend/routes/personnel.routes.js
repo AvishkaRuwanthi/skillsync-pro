@@ -36,24 +36,68 @@ router.get('/', async (req, res) => {
         query += ' ORDER BY id ASC';
     }
 
-    // Pagination
+    // Pagination (template literals instead of placeholders)
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 10;
     const offset = (pageNum - 1) * limitNum;
-    query += ' LIMIT ? OFFSET ?';
-    params.push(limitNum, offset);
+    query += ` LIMIT ${limitNum} OFFSET ${offset}`;
 
     try {
         const [rows] = await db.query(query, params);
-        res.json(rows);
+
+        // Attach skills for each personnel row
+        const personnelWithSkills = await Promise.all(
+            rows.map(async (p) => {
+                const [skills] = await db.query(
+                    `SELECT s.name
+                     FROM personnel_skills ps
+                     JOIN skills s ON ps.skill_id = s.id
+                     WHERE ps.personnel_id = ?`,
+                    [p.id]
+                );
+
+                return {
+                    ...p,
+                    skills: skills.map((s) => s.name),
+                };
+            })
+        );
+
+        res.json(personnelWithSkills);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error("Error fetching personnel:", err);
+        res.status(500).json({ error: err.message || "Internal server error" });
     }
 });
 
-// Other CRUD routes
-router.post('/', createPersonnel);
-router.put('/:id', updatePersonnel);
-router.delete('/:id', deletePersonnel);
+// Create new personnel
+router.post('/', async (req, res) => {
+    try {
+        await createPersonnel(req, res);
+    } catch (err) {
+        console.error("Error creating personnel:", err);
+        res.status(500).json({ error: err.message || "Internal server error" });
+    }
+});
+
+// Update personnel by ID
+router.put('/:id', async (req, res) => {
+    try {
+        await updatePersonnel(req, res);
+    } catch (err) {
+        console.error("Error updating personnel:", err);
+        res.status(500).json({ error: err.message || "Internal server error" });
+    }
+});
+
+// Delete personnel by ID
+router.delete('/:id', async (req, res) => {
+    try {
+        await deletePersonnel(req, res);
+    } catch (err) {
+        console.error("Error deleting personnel:", err);
+        res.status(500).json({ error: err.message || "Internal server error" });
+    }
+});
 
 export default router;

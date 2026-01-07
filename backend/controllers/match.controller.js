@@ -21,11 +21,12 @@ export const getProjectMatches = async (req, res) => {
         const [personnelList] = await db.query(`SELECT * FROM personnel`);
 
         const proficiencyOrder = { Beginner: 1, Intermediate: 2, Advanced: 3, Expert: 4 };
+        const today = new Date().toISOString().split('T')[0]; // Current date for availability check
 
-        // Calculate match percentage for each personnel
         let matchedPersonnel = [];
 
         for (let person of personnelList) {
+            // Get skills of this personnel
             const [personSkills] = await db.query(
                 `SELECT skill_id, proficiency
                  FROM personnel_skills
@@ -33,6 +34,7 @@ export const getProjectMatches = async (req, res) => {
                 [person.id]
             );
 
+            // Count matched skills
             let matchedSkillsCount = 0;
             for (let reqSkill of requirements) {
                 const skill = personSkills.find(ps => ps.skill_id === reqSkill.skill_id);
@@ -43,13 +45,13 @@ export const getProjectMatches = async (req, res) => {
 
             const matchPercentage = Math.round((matchedSkillsCount / requirements.length) * 100);
 
-            if (matchPercentage >= 50) { // ✅ Filter: only >=50%
+            if (matchPercentage >= 50) { // Only consider personnel with >=50% match
                 // Check availability
                 const [assignments] = await db.query(
                     `SELECT * FROM personnel_projects
                      WHERE personnel_id = ?
                      AND NOT (end_date < ? OR start_date > ?)`,
-                    [person.id, new Date().toISOString().split('T')[0], new Date().toISOString().split('T')[0]]
+                    [person.id, today, today]
                 );
                 const available = assignments.length === 0;
 
@@ -73,7 +75,7 @@ export const getProjectMatches = async (req, res) => {
         });
 
     } catch (err) {
-        console.error(err);
+        console.error('Error in getProjectMatches:', err);
         res.status(500).json({ error: err.message });
     }
 };

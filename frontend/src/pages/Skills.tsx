@@ -1,35 +1,38 @@
-// src/components/Skills.tsx
-import React, { useState, useEffect } from "react";
-import axios from "axios";
+import React, { useEffect, useState } from "react";
+import { FaEdit, FaTrash } from "react-icons/fa";
+import { fetchSkills, addSkill, updateSkill, deleteSkill } from "../api";
 
 interface Skill {
   id: number;
   name: string;
-  level: string; // e.g., Beginner, Intermediate, Expert
+  category?: string;
+  description?: string;
 }
 
 const Skills: React.FC = () => {
   const [skillsList, setSkillsList] = useState<Skill[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
 
   // Modal state
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState<"add" | "edit">("add");
   const [currentSkill, setCurrentSkill] = useState<Partial<Skill>>({});
 
-  const fetchSkills = async () => {
+  // Load skills
+  const loadSkills = async () => {
+    setLoading(true);
     try {
-      const response = await axios.get("http://localhost:5000/skills");
-      setSkillsList(response.data);
-      setLoading(false);
+      const data = await fetchSkills();
+      setSkillsList(data);
     } catch (error) {
       console.error("Error fetching skills:", error);
+    } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchSkills();
+    loadSkills();
   }, []);
 
   const openModal = (type: "add" | "edit", skill?: Skill) => {
@@ -47,14 +50,11 @@ const Skills: React.FC = () => {
     e.preventDefault();
     try {
       if (modalType === "add") {
-        await axios.post("http://localhost:5000/skills", currentSkill);
+        await addSkill(currentSkill);
       } else if (modalType === "edit" && currentSkill.id) {
-        await axios.put(
-          `http://localhost:5000/skills/${currentSkill.id}`,
-          currentSkill
-        );
+        await updateSkill(currentSkill.id, currentSkill);
       }
-      fetchSkills();
+      await loadSkills();
       closeModal();
     } catch (error) {
       console.error("Error saving skill:", error);
@@ -64,8 +64,8 @@ const Skills: React.FC = () => {
   const handleDelete = async (id: number) => {
     if (!window.confirm("Are you sure you want to delete this skill?")) return;
     try {
-      await axios.delete(`http://localhost:5000/skills/${id}`);
-      fetchSkills();
+      await deleteSkill(id);
+      await loadSkills();
     } catch (error) {
       console.error("Error deleting skill:", error);
     }
@@ -89,39 +89,31 @@ const Skills: React.FC = () => {
         <p>No skills found.</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="min-w-full border border-gray-200 text-left bg-white">
-            <thead className="bg-gray-100 text-gray-700">
-              <tr>
-                <th className="border px-4 py-2">ID</th>
-                <th className="border px-4 py-2">Skill Name</th>
-                <th className="border px-4 py-2">Level</th>
-                <th className="border px-4 py-2">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {skillsList.map((skill) => (
-                <tr key={skill.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="border px-4 py-2">{skill.id}</td>
-                  <td className="border px-4 py-2">{skill.name}</td>
-                  <td className="border px-4 py-2">{skill.level}</td>
-                  <td className="border px-4 py-2 space-x-2">
-                    <button
-                      className="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded"
-                      onClick={() => openModal("edit", skill)}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded"
-                      onClick={() => handleDelete(skill.id)}
-                    >
-                      Delete
-                    </button>
-                  </td>
+          <div className="bg-white shadow rounded-lg overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Skill Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {skillsList.map((skill) => (
+                  <tr key={skill.id} className="odd:bg-white even:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{skill.id}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{skill.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{skill.category || <span className="text-gray-400">Uncategorized</span>}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button title="Edit" onClick={() => openModal("edit", skill)} className="text-indigo-600 hover:text-indigo-800 p-2 rounded"><FaEdit/></button>
+                      <button title="Delete" onClick={() => handleDelete(skill.id)} className="text-red-600 hover:text-red-800 p-2 rounded"><FaTrash/></button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -143,15 +135,34 @@ const Skills: React.FC = () => {
                 }
                 required
               />
-              <input
-                type="text"
-                placeholder="Level (Beginner/Intermediate/Expert)"
+              <select
+                aria-label="Skill category"
                 className="w-full p-2 rounded bg-gray-100 text-gray-900"
-                value={currentSkill.level || ""}
+                value={currentSkill.category || ""}
                 onChange={(e) =>
-                  setCurrentSkill({ ...currentSkill, level: e.target.value })
+                  setCurrentSkill({ ...currentSkill, category: e.target.value })
                 }
                 required
+              >
+                <option value="">Select category</option>
+                <option value="Programming Languages">Programming Languages</option>
+                <option value="Frontend Development">Frontend Development</option>
+                <option value="Backend Development">Backend Development</option>
+                <option value="Databases">Databases</option>
+                <option value="Mobile Development">Mobile Development</option>
+                <option value="DevOps / Deployment">DevOps / Deployment</option>
+                <option value="UI/UX Design">UI/UX Design</option>
+                <option value="Testing & QA">Testing & QA</option>
+                <option value="Version Control">Version Control</option>
+                <option value="Other / Soft Skills">Other / Soft Skills</option>
+              </select>
+              <textarea
+                placeholder="Description (optional)"
+                className="w-full p-2 rounded bg-gray-100 text-gray-900"
+                value={currentSkill.description || ""}
+                onChange={(e) =>
+                  setCurrentSkill({ ...currentSkill, description: e.target.value })
+                }
               />
               <div className="flex justify-end space-x-2 mt-4">
                 <button

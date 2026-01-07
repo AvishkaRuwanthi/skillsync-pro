@@ -3,6 +3,7 @@ import { assignPersonnelToProject } from '../controllers/personnelProject.contro
 
 const router = express.Router();
 
+// POST: Assign a personnel to a project
 router.post('/', assignPersonnelToProject);
 
 export default router;

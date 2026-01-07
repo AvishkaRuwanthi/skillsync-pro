@@ -9,7 +9,7 @@ export const assignPersonnelToProject = async (req, res) => {
     }
 
     try {
-        // Check overlapping assignments (availability check)
+        // Check for overlapping assignments (availability)
         const [existing] = await db.query(
             `SELECT * FROM personnel_projects
              WHERE personnel_id = ?
@@ -23,18 +23,20 @@ export const assignPersonnelToProject = async (req, res) => {
             });
         }
 
-        await db.query(
+        // Assign personnel to project
+        const [result] = await db.query(
             `INSERT INTO personnel_projects (personnel_id, project_id, start_date, end_date)
              VALUES (?, ?, ?, ?)`,
             [personnel_id, project_id, start_date, end_date]
         );
 
         res.status(201).json({
-            message: 'Personnel successfully assigned to project'
+            message: 'Personnel successfully assigned to project',
+            assignmentId: result.insertId
         });
 
     } catch (err) {
-        console.error(err);
+        console.error('Error assigning personnel to project:', err);
         res.status(500).json({ error: err.message });
     }
 };
