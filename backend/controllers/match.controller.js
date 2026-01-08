@@ -46,21 +46,29 @@ export const getProjectMatches = async (req, res) => {
             const matchPercentage = Math.round((matchedSkillsCount / requirements.length) * 100);
 
             if (matchPercentage >= 50) { // Only consider personnel with >=50% match
-                // Check availability
+                // Check availability and get assignment info
                 const [assignments] = await db.query(
-                    `SELECT * FROM personnel_projects
-                     WHERE personnel_id = ?
-                     AND NOT (end_date < ? OR start_date > ?)`,
+                    `SELECT pp.*, p.name AS project_name
+                     FROM personnel_projects pp
+                     JOIN projects p ON pp.project_id = p.id
+                     WHERE pp.personnel_id = ?
+                     AND NOT (pp.end_date < ? OR pp.start_date > ?)`,
                     [person.id, today, today]
                 );
                 const available = assignments.length === 0;
+                const assignedProject = assignments.length > 0 ? {
+                    id: assignments[0].project_id,
+                    name: assignments[0].project_name
+                } : null;
 
                 matchedPersonnel.push({
                     id: person.id,
                     name: person.name,
                     role: person.role,
                     match_percentage: matchPercentage,
-                    available
+                    available,
+                    assigned_project: assignedProject,
+                    assignment_id: assignments.length > 0 ? assignments[0].id : null
                 });
             }
         }

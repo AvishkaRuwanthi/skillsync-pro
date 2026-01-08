@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { FaEdit, FaTrash } from "react-icons/fa";
+import { FaEdit, FaTrash, FaSearch } from "react-icons/fa";
 import { fetchProjects, addProject, updateProject, deleteProject, fetchSkills } from "../api";
 
 interface Project {
@@ -13,15 +13,6 @@ interface Project {
   status?: string;
   created_at?: string;
 }
-
-const proficiencyLabel = (n: number | string | undefined) => {
-  const v = Number(n);
-  if (v === 1) return 'Beginner';
-  if (v === 2) return 'Intermediate';
-  if (v === 3) return 'Advanced';
-  if (v === 4) return 'Expert';
-  return String(n || 'N/A');
-};
 
 const Projects: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -152,10 +143,10 @@ const Projects: React.FC = () => {
 
   return (
     <div className="text-gray-900">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h2 className="text-2xl font-bold">Projects</h2>
         <button
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition-colors"
           onClick={() => openModal("add")}
         >
           Add Project
@@ -163,185 +154,293 @@ const Projects: React.FC = () => {
       </div>
 
       {loading ? (
-        <p>Loading projects...</p>
+        <div className="bg-white rounded-lg shadow p-8 text-center">
+          <p className="text-gray-600">Loading projects...</p>
+        </div>
       ) : projects.length === 0 ? (
-        <p>No projects found.</p>
+        <div className="bg-white rounded-lg shadow p-8 text-center">
+          <p className="text-gray-600">No projects found.</p>
+        </div>
       ) : (
-        <div className="overflow-x-auto">
-          <div className="flex items-center justify-between mb-3 gap-3">
-            <div className="flex items-center gap-2">
-              <input value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} placeholder="Search projects..." className="px-3 py-1 border rounded w-64" />
-              <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} className="px-2 py-1 border rounded" title="Filter projects by status">
-                <option value="All">All Statuses</option>
-                <option value="Planning">Planning</option>
-                <option value="Active">Active</option>
-                <option value="Completed">Completed</option>
-              </select>
-            </div>
-            <div className="flex items-center gap-2">
-              <select value={sortKey} onChange={e=>setSortKey(e.target.value as any)} className="px-2 py-1 border rounded" title="Sort projects by">
-                <option value="created">Created</option>
-                <option value="start">Start Date</option>
-                <option value="name">Name</option>
-              </select>
-              <button onClick={()=>setSortDir(d=> d==='asc' ? 'desc' : 'asc')} className="px-2 py-1 border rounded">{sortDir==='asc' ? '↑' : '↓'}</button>
+        <div className="space-y-4">
+          {/* Filters and Search */}
+          <div className="bg-white rounded-lg shadow p-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1">
+                <div className="flex items-center bg-gray-100 rounded-full px-3 py-1.5 shadow-sm flex-1 min-w-0">
+                  <FaSearch className="text-gray-400 mr-3 flex-shrink-0" />
+                  <input 
+                    value={searchQuery} 
+                    onChange={e=>setSearchQuery(e.target.value)} 
+                    placeholder="Search projects..." 
+                    className="bg-transparent focus:outline-none w-full text-sm" 
+                  />
+                </div>
+                <select 
+                  value={statusFilter} 
+                  onChange={e=>setStatusFilter(e.target.value)} 
+                  className="px-3 py-1.5 bg-gray-100 rounded-full border-0 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm shadow-sm" 
+                  title="Filter projects by status"
+                >
+                  <option value="All">All Statuses</option>
+                  <option value="Planning">Planning</option>
+                  <option value="Active">Active</option>
+                  <option value="Completed">Completed</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <select 
+                  value={sortKey} 
+                  onChange={e=>setSortKey(e.target.value as any)} 
+                  className="px-3 py-1.5 bg-gray-100 rounded-full border-0 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm shadow-sm" 
+                  title="Sort projects by"
+                >
+                  <option value="created">Created</option>
+                  <option value="start">Start Date</option>
+                  <option value="name">Name</option>
+                </select>
+                <button 
+                  onClick={()=>setSortDir(d=> d==='asc' ? 'desc' : 'asc')} 
+                  className="px-3 py-1.5 bg-gray-100 rounded-full hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors shadow-sm"
+                  title={`Sort ${sortDir === 'asc' ? 'Ascending' : 'Descending'}`}
+                >
+                  {sortDir==='asc' ? '↑' : '↓'}
+                </button>
+              </div>
             </div>
           </div>
+
+          {/* Table */}
           <div className="bg-white shadow rounded-lg overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">ID</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-2/12">Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-3/12">Description</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">Start Date</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">End Date</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">Created</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-2/12">Required Skills (Min)</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {displayedProjects.map((proj) => (
-                  <tr key={proj.id} className="odd:bg-white even:bg-gray-50 align-top">
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700">{proj.id}</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{proj.name}</td>
-                    <td className="px-4 py-4 text-sm text-gray-700 max-w-md">
-                      <div className="truncate max-w-md" title={proj.description}>{proj.description || '-'}</div>
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700">{proj.start_date ? new Date(proj.start_date).toLocaleDateString() : '-'}</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700">{proj.end_date ? new Date(proj.end_date).toLocaleDateString() : '-'}</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700">{proj.status || '-'}</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700">{proj.created_at ? new Date(proj.created_at).toLocaleString() : '-'}</td>
-                    <td className="px-4 py-4 text-sm text-gray-700">
-                      {proj.requiredSkills && proj.requiredSkills.length > 0 ? (
-                        <div className="flex flex-wrap gap-2">
-                          {proj.requiredSkills.map((s: any, idx: number) => (
-                            <div key={idx} className="px-2 py-1 bg-indigo-50 text-indigo-800 rounded-full text-sm">{s.skill_name} <span className="ml-1 text-xs text-indigo-600">({s.min_proficiency})</span></div>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-gray-400">No skills</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button title="Edit" onClick={() => openModal("edit", proj)} className="text-indigo-600 hover:text-indigo-800 p-2 rounded"><FaEdit/></button>
-                      <button title="Delete" onClick={() => handleDelete(proj.id)} className="text-red-600 hover:text-red-800 p-2 rounded"><FaTrash/></button>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">Description</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Start Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">End Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Created</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">Required Skills</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {displayedProjects.map((proj) => (
+                    <tr key={proj.id} className="hover:bg-gray-50 transition-colors align-top">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700">{proj.id}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{proj.name}</td>
+                      <td className="px-4 py-4 text-sm text-gray-700">
+                        <div className="max-w-md" title={proj.description}>
+                          {proj.description || '-'}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700">
+                        {proj.start_date ? new Date(proj.start_date).toLocaleDateString() : '-'}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700">
+                        {proj.end_date ? new Date(proj.end_date).toLocaleDateString() : '-'}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          proj.status === 'Active' ? 'bg-green-100 text-green-800' :
+                          proj.status === 'Completed' ? 'bg-blue-100 text-blue-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {proj.status || '-'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700">
+                        {proj.created_at ? new Date(proj.created_at).toLocaleDateString() : '-'}
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-700">
+                        {proj.requiredSkills && proj.requiredSkills.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {proj.requiredSkills.map((s: any, idx: number) => (
+                              <div key={idx} className="px-2 py-1 bg-indigo-50 text-indigo-800 rounded-full text-xs">
+                                {s.skill_name} <span className="ml-1 text-indigo-600">({s.min_proficiency})</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-xs">No skills</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center justify-end gap-1">
+                          <button 
+                            title="Edit" 
+                            onClick={() => openModal("edit", proj)} 
+                            className="text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 p-2 rounded transition-colors"
+                          >
+                            <FaEdit/>
+                          </button>
+                          <button 
+                            title="Delete" 
+                            onClick={() => handleDelete(proj.id)} 
+                            className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded transition-colors"
+                          >
+                            <FaTrash/>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-20 flex justify-center items-center z-50">
-          <div className="bg-white p-6 rounded shadow w-full max-w-md">
-            <h3 className="text-xl font-bold mb-4">
-              {modalType === "add" ? "Add Project" : "Edit Project"}
-            </h3>
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <input
-                type="text"
-                placeholder="Project Name"
-                className="w-full p-2 rounded bg-gray-100 text-gray-900"
-                value={currentProject.name || ""}
-                onChange={(e) =>
-                  setCurrentProject({ ...currentProject, name: e.target.value })
-                }
-                required
-              />
-              <textarea
-                placeholder="Description"
-                className="w-full p-2 rounded bg-gray-100 text-gray-900"
-                value={currentProject.description || ""}
-                onChange={(e) =>
-                  setCurrentProject({ ...currentProject, description: e.target.value })
-                }
-                required
-              />
-              <div className="flex gap-2">
-                <div className="w-1/2">
-                  <label className="text-sm text-gray-600">Start Date</label>
-                  <input type="date" className="w-full p-2 rounded bg-gray-100" title="Start Date" value={currentProject.start_date || ''} onChange={e=> setCurrentProject({...currentProject, start_date: e.target.value})} />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4" onClick={closeModal}>
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-xl font-bold text-gray-900">
+                {modalType === "add" ? "Add Project" : "Edit Project"}
+              </h3>
+            </div>
+            <form onSubmit={handleSubmit} className="flex-1 max-h-96 overflow-y-auto p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
+                <input
+                  type="text"
+                  placeholder="Enter project name"
+                  className="w-full p-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  value={currentProject.name || ""}
+                  onChange={(e) =>
+                    setCurrentProject({ ...currentProject, name: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  placeholder="Enter project description"
+                  rows={3}
+                  className="w-full p-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 resize-none"
+                  value={currentProject.description || ""}
+                  onChange={(e) =>
+                    setCurrentProject({ ...currentProject, description: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                  <input 
+                    type="date" 
+                    className="w-full p-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                    title="Start Date" 
+                    value={currentProject.start_date || ''} 
+                    onChange={e=> setCurrentProject({...currentProject, start_date: e.target.value})} 
+                  />
                 </div>
-                <div className="w-1/2">
-                  <label className="text-sm text-gray-600">End Date</label>
-                  <input type="date" className="w-full p-2 rounded bg-gray-100" title="End Date" value={currentProject.end_date || ''} onChange={e=> setCurrentProject({...currentProject, end_date: e.target.value})} />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                  <input 
+                    type="date" 
+                    className="w-full p-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                    title="End Date" 
+                    value={currentProject.end_date || ''} 
+                    onChange={e=> setCurrentProject({...currentProject, end_date: e.target.value})} 
+                  />
                 </div>
               </div>
               <div>
-                <label className="text-sm text-gray-600">Status</label>
-                <select className="w-full p-2 rounded bg-gray-100" title="Select project status" value={currentProject.status || 'Planning'} onChange={e=> setCurrentProject({...currentProject, status: e.target.value})}>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select 
+                  className="w-full p-2.5 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                  title="Select project status" 
+                  value={currentProject.status || 'Planning'} 
+                  onChange={e=> setCurrentProject({...currentProject, status: e.target.value})}
+                >
                   <option value="Planning">Planning</option>
                   <option value="Active">Active</option>
                   <option value="Completed">Completed</option>
                 </select>
               </div>
-              {modalError && <div className="text-sm text-red-600">{modalError}</div>}
+              {modalError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm">
+                  {modalError}
+                </div>
+              )}
               <div>
-                <div className="text-sm text-gray-600 mb-2">Select required skills and set minimum proficiency</div>
-                <div className="border rounded p-2 max-h-48 overflow-auto">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Required Skills</label>
+                <div className="border border-gray-300 rounded p-3 max-h-64 overflow-y-auto bg-gray-50">
                   {skillsList.length === 0 ? (
-                    <div className="text-sm text-gray-500">No skills available</div>
+                    <div className="text-sm text-gray-500 text-center py-4">No skills available</div>
                   ) : (
-                    skillsList.map((sk: any) => {
-                      const selected = (currentProject.requiredSkills || []).find((rs: any) => (rs.skill_id ? String(rs.skill_id) === String(sk.id) : rs.skill_name === sk.name));
-                      const minVal = selected ? (selected.min_proficiency || 1) : 1;
-                      return (
-                        <label key={sk.id} className="flex items-center justify-between p-1 hover:bg-gray-50 rounded">
-                          <div className="flex items-center gap-2">
-                            <input type="checkbox" checked={!!selected} onChange={(e)=>{
-                              const checked = e.target.checked;
-                              const cur = Array.isArray(currentProject.requiredSkills) ? [...currentProject.requiredSkills] : [];
-                              if (checked) {
-                                cur.push({ skill_id: sk.id, skill_name: sk.name, min_proficiency: 1 });
-                              } else {
+                    <div className="space-y-2">
+                      {skillsList.map((sk: any) => {
+                        const selected = (currentProject.requiredSkills || []).find((rs: any) => (rs.skill_id ? String(rs.skill_id) === String(sk.id) : rs.skill_name === sk.name));
+                        const minVal = selected ? (selected.min_proficiency || 1) : 1;
+                        return (
+                          <label key={sk.id} className="flex items-center justify-between p-2 hover:bg-white rounded transition-colors">
+                            <div className="flex items-center gap-2 flex-1">
+                              <input 
+                                type="checkbox" 
+                                checked={!!selected} 
+                                onChange={(e)=>{
+                                  const checked = e.target.checked;
+                                  const cur = Array.isArray(currentProject.requiredSkills) ? [...currentProject.requiredSkills] : [];
+                                  if (checked) {
+                                    cur.push({ skill_id: sk.id, skill_name: sk.name, min_proficiency: 1 });
+                                  } else {
+                                    const idx = cur.findIndex((c:any)=> (c.skill_id? String(c.skill_id)===String(sk.id) : c.skill_name===sk.name));
+                                    if (idx>=0) cur.splice(idx,1);
+                                  }
+                                  setCurrentProject({ ...currentProject, requiredSkills: cur });
+                                }} 
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="text-sm text-gray-800">{sk.name}</span>
+                            </div>
+                            <select 
+                              value={minVal} 
+                              onChange={(e)=>{
+                                const val = Number(e.target.value);
+                                const cur = Array.isArray(currentProject.requiredSkills) ? [...currentProject.requiredSkills] : [];
                                 const idx = cur.findIndex((c:any)=> (c.skill_id? String(c.skill_id)===String(sk.id) : c.skill_name===sk.name));
-                                if (idx>=0) cur.splice(idx,1);
-                              }
-                              setCurrentProject({ ...currentProject, requiredSkills: cur });
-                            }} />
-                            <span className="text-sm text-gray-800">{sk.name}</span>
-                          </div>
-                          <select value={minVal} onChange={(e)=>{
-                            const val = Number(e.target.value);
-                            const cur = Array.isArray(currentProject.requiredSkills) ? [...currentProject.requiredSkills] : [];
-                            const idx = cur.findIndex((c:any)=> (c.skill_id? String(c.skill_id)===String(sk.id) : c.skill_name===sk.name));
-                            if (idx >= 0) {
-                              cur[idx] = { ...(cur[idx]||{}), min_proficiency: val };
-                            } else {
-                              // if not selected, add it
-                              cur.push({ skill_id: sk.id, skill_name: sk.name, min_proficiency: val });
-                            }
-                            setCurrentProject({ ...currentProject, requiredSkills: cur });
-                          }} className="ml-2 px-2 py-1 border rounded text-sm">
-                            <option value={1}>1</option>
-                            <option value={2}>2</option>
-                            <option value={3}>3</option>
-                            <option value={4}>4</option>
-                          </select>
-                        </label>
-                      );
-                    })
+                                if (idx >= 0) {
+                                  cur[idx] = { ...(cur[idx]||{}), min_proficiency: val };
+                                } else {
+                                  cur.push({ skill_id: sk.id, skill_name: sk.name, min_proficiency: val });
+                                }
+                                setCurrentProject({ ...currentProject, requiredSkills: cur });
+                              }} 
+                              className="ml-2 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              disabled={!selected}
+                            >
+                              <option value={1}>Beginner (1)</option>
+                              <option value={2}>Intermediate (2)</option>
+                              <option value={3}>Advanced (3)</option>
+                              <option value={4}>Expert (4)</option>
+                            </select>
+                          </label>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
               </div>
-              <div className="flex justify-end space-x-2 mt-4">
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
                 <button
                   type="button"
-                  className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded"
+                  className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
                   onClick={closeModal}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                 >
                   {modalType === "add" ? "Add" : "Save"}
                 </button>

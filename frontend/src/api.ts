@@ -207,3 +207,18 @@ export const assignPersonnelToProject = async (payload: any) => {
     return { error: err instanceof Error ? err.message : String(err) };
   }
 };
+
+// Remove personnel from a project
+export const removePersonnelFromProject = async (payload: { personnel_id: number; project_id: number }) => {
+  try {
+    const res = await fetch(`${API_BASE}/personnel-project`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return await res.json();
+  } catch (err) {
+    console.error('Error removing personnel from project:', err);
+    return { error: err instanceof Error ? err.message : String(err) };
+  }
+};
