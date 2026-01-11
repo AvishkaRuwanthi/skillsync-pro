@@ -278,8 +278,13 @@ const MatchCard: React.FC<{ project: Project; person: MatchedPerson; requirement
   const assignData = assignState[key] || { open: false, start_date: '', end_date: '' };
   
   // Check if person is assigned to current project or different project
-  const isAssignedToCurrentProject = person.assigned_project && person.assigned_project.id === project.id;
-  const isAssignedToDifferentProject = person.assigned_project && person.assigned_project.id !== project.id;
+  const isAssignedToCurrentProject = Boolean(
+    person.assigned_project && person.assigned_project.id === project.id
+  );
+  
+  const isAssignedToDifferentProject = Boolean(
+    person.assigned_project && person.assigned_project.id !== project.id
+  );
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow">
