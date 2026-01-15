@@ -297,14 +297,15 @@ const Projects: React.FC = () => {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4" onClick={closeModal}>
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b border-gray-200">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 py-8 px-4" onClick={closeModal}>
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[calc(100vh-12rem)] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="px-4 py-3 border-b border-gray-200">
               <h3 className="text-xl font-bold text-gray-900">
                 {modalType === "add" ? "Add Project" : "Edit Project"}
               </h3>
             </div>
-            <form onSubmit={handleSubmit} className="flex-1 max-h-96 overflow-y-auto p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="flex-1 flex flex-col">
+              <div className="overflow-y-auto p-3 space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
                 <input
@@ -373,17 +374,17 @@ const Projects: React.FC = () => {
               )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Required Skills</label>
-                <div className="border border-gray-300 rounded p-3 max-h-64 overflow-y-auto bg-gray-50">
+                <div className="border border-gray-300 rounded p-2 max-h-32 overflow-y-auto bg-gray-50">
                   {skillsList.length === 0 ? (
                     <div className="text-sm text-gray-500 text-center py-4">No skills available</div>
                   ) : (
-                    <div className="space-y-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {skillsList.map((sk: any) => {
                         const selected = (currentProject.requiredSkills || []).find((rs: any) => (rs.skill_id ? String(rs.skill_id) === String(sk.id) : rs.skill_name === sk.name));
                         const minVal = selected ? (selected.min_proficiency || 1) : 1;
                         return (
-                          <label key={sk.id} className="flex items-center justify-between p-2 hover:bg-white rounded transition-colors">
-                            <div className="flex items-center gap-2 flex-1">
+                          <label key={sk.id} className="flex items-center justify-between p-2 hover:bg-white rounded transition-colors gap-3 w-full">
+                            <div className="flex items-center gap-2 min-w-0">
                               <input 
                                 type="checkbox" 
                                 checked={!!selected} 
@@ -398,9 +399,9 @@ const Projects: React.FC = () => {
                                   }
                                   setCurrentProject({ ...currentProject, requiredSkills: cur });
                                 }} 
-                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
                               />
-                              <span className="text-sm text-gray-800">{sk.name}</span>
+                              <span className="text-sm text-gray-800 truncate">{sk.name}</span>
                             </div>
                             <select 
                               value={minVal} 
@@ -415,7 +416,7 @@ const Projects: React.FC = () => {
                                 }
                                 setCurrentProject({ ...currentProject, requiredSkills: cur });
                               }} 
-                              className="ml-2 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="ml-4 w-28 flex-shrink-0 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                               disabled={!selected}
                             >
                               <option value={1}>Beginner (1)</option>
@@ -430,7 +431,8 @@ const Projects: React.FC = () => {
                   )}
                 </div>
               </div>
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+              </div>
+              <div className="px-4 py-3 border-t border-gray-200 flex justify-end gap-3 bg-white">
                 <button
                   type="button"
                   className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"

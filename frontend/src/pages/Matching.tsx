@@ -101,12 +101,21 @@ const Matching: React.FC = () => {
     // intentionally depend on projects and matches so we only request when undefined
   }, [projects, matches]);
 
-  const loadMatches = async (projectId: number) => {
-    if (matches[projectId]) return; // cached
-    setMatches(s => ({ ...s, [projectId]: null }));
+  const loadMatches = async (projectId: number, force = false) => {
+    if (!force && matches[projectId]) return; // cached unless forced
+  
+    setMatches(s => ({ ...s, [projectId]: null })); // loading state
+  
     const res = await fetchProjectMatches(projectId);
     if (!res) return;
-    setMatches((m) => ({ ...m, [projectId]: { requirements: res.requirements || [], matched_personnel: res.matched_personnel || [] } }));
+  
+    setMatches(m => ({
+      ...m,
+      [projectId]: {
+        requirements: res.requirements || [],
+        matched_personnel: res.matched_personnel || []
+      }
+    }));
   };
 
   const openAssign = (projectId: number, personId: number) => {
@@ -129,9 +138,8 @@ const Matching: React.FC = () => {
     const resp = await assignPersonnelToProject(payload);
     if (resp && !resp.error) {
       // refresh matches for all projects to update availability
-      setMatches({});
       projects.forEach(p => {
-        loadMatches(p.id).catch(e => console.error(e));
+        loadMatches(p.id, true).catch(e => console.error(e));
       });
       closeAssign(projectId, personId);
     } else {
@@ -145,9 +153,8 @@ const Matching: React.FC = () => {
     const resp = await removePersonnelFromProject(payload);
     if (resp && !resp.error) {
       // refresh matches for all projects to update availability
-      setMatches({});
       projects.forEach(p => {
-        loadMatches(p.id).catch(e => console.error(e));
+        loadMatches(p.id, true).catch(e => console.error(e));
       });
     } else {
       alert(resp.error || 'Failed to remove');
@@ -221,32 +228,35 @@ const Matching: React.FC = () => {
                 <p className="text-gray-600">No projects match your search.</p>
               </div>
             ) : (
-              displayedProjects.map(project => (
+              displayedProjects.map(project => {
+                const projMatch = matches[project.id];
+                const people = projMatch && projMatch.matched_personnel ? sortPeople(projMatch.matched_personnel).filter(p => p.match_percentage >= 70) : [];
+                return (
                 <div key={project.id} className="bg-white rounded-lg shadow p-6">
                   <div className="flex items-start justify-between mb-4">
                     <h3 className="text-xl font-semibold text-gray-900">{project.name}</h3>
                   </div>
 
                   {/* Matches area */}
-                  {matches[project.id] === undefined ? null : matches[project.id] === null ? (
+                  {projMatch === undefined ? null : projMatch === null ? (
                     <div className="text-center py-8">
                       <p className="text-sm text-gray-600">Loading matches...</p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {matches[project.id]!.matched_personnel.length === 0 ? (
+                      {people.length === 0 ? (
                         <div className="col-span-full text-center py-8">
                           <p className="text-sm text-gray-600">No recommended personnel.</p>
                         </div>
                       ) : (
-                        sortPeople(matches[project.id]!.matched_personnel).map(person => (
-                          <MatchCard key={person.id} project={project} person={person} requirements={matches[project.id]!.requirements} assignState={assignState} openAssign={openAssign} closeAssign={closeAssign} confirmAssign={confirmAssign} handleRemove={handleRemove} />
+                        people.map(person => (
+                          <MatchCard key={person.id} project={project} person={person} requirements={projMatch!.requirements} assignState={assignState} openAssign={openAssign} closeAssign={closeAssign} confirmAssign={confirmAssign} handleRemove={handleRemove} />
                         ))
                       )}
                     </div>
                   )}
                 </div>
-              ))
+              )})
             )}
           </div>
         </div>
@@ -391,10 +401,5 @@ const MatchCard: React.FC<{ project: Project; person: MatchedPerson; requirement
     </div>
   );
 };
-
-// helper to manage assignState from inside MatchCard without prop drilling
-// (moved to top of file)
-
-
 
 export default Matching;
