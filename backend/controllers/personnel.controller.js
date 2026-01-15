@@ -57,13 +57,16 @@ export const createPersonnel = async (req, res) => {
     );
     const personnel_id = result.insertId;
 
-    // Insert skills
+    // Insert skills (support either array of strings or array of objects { name, proficiency })
     if (Array.isArray(skills)) {
-      for (const skillName of skills) {
+      for (const s of skills) {
+        const skillName = typeof s === 'string' ? s : (s.name || s.skill_name || null);
+        const proficiency = typeof s === 'object' && s !== null ? (s.proficiency || null) : null;
+        if (!skillName) continue;
         const skill_id = await ensureSkill(skillName);
         await db.query(
-          'INSERT INTO personnel_skills (personnel_id, skill_id) VALUES (?, ?)',
-          [personnel_id, skill_id]
+          'INSERT INTO personnel_skills (personnel_id, skill_id, proficiency) VALUES (?, ?, ?)',
+          [personnel_id, skill_id, proficiency]
         );
       }
     }
@@ -91,13 +94,16 @@ export const updatePersonnel = async (req, res) => {
     // Remove old skills
     await db.query('DELETE FROM personnel_skills WHERE personnel_id=?', [id]);
 
-    // Insert new skills
+    // Insert new skills (support names or objects with proficiency)
     if (Array.isArray(skills)) {
-      for (const skillName of skills) {
+      for (const s of skills) {
+        const skillName = typeof s === 'string' ? s : (s.name || s.skill_name || null);
+        const proficiency = typeof s === 'object' && s !== null ? (s.proficiency || null) : null;
+        if (!skillName) continue;
         const skill_id = await ensureSkill(skillName);
         await db.query(
-          'INSERT INTO personnel_skills (personnel_id, skill_id) VALUES (?, ?)',
-          [id, skill_id]
+          'INSERT INTO personnel_skills (personnel_id, skill_id, proficiency) VALUES (?, ?, ?)',
+          [id, skill_id, proficiency]
         );
       }
     }
